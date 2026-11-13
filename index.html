@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>卓の手帳 | TRPG管理</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <!-- 左側のメニュー。JavaScriptで画面を切り替える -->
+    <aside class="sidebar">
+      <h1>卓の手帳</h1>
+      <p class="subtitle">TRPG MANAGER</p>
+      <nav class="navigation">
+        <button class="nav-button active" id="scheduleNav">スケジュール</button>
+        <button class="nav-button" id="charactersNav">探索者管理</button>
+        <button class="nav-button" id="scenariosNav">シナリオ保存</button>
+      </nav>
+      <div class="backup-sidebar"><button type="button" id="openBackup" class="secondary-button">データのバックアップ・復元</button></div>
+    </aside>
+
+    <main class="main">
+      <!-- スケジュール画面：前回の機能を残す -->
+      <section id="schedulePage">
+        <header class="header">
+          <div><p class="subtitle">MY TRPG PLANNER</p><h2>スケジュール</h2></div>
+          <button id="newSessionButton" class="primary-button">＋ 卓を登録</button>
+        </header>
+        <div class="tabs">
+          <button id="calendarTab" class="tab active">カレンダー</button>
+          <button id="listTab" class="tab">卓一覧</button>
+        </div>
+        <!-- カレンダー専用：開催予定と通過後を切り替える -->
+        <div class="status-filters" id="calendarFilters" aria-label="カレンダーの表示切り替え">
+          <button type="button" class="status-filter active" data-status="すべて">すべて</button>
+          <button type="button" class="status-filter" data-status="通過予定">通過予定</button>
+          <button type="button" class="status-filter" data-status="通過後">通過後</button>
+        </div>
+        <!-- 卓一覧専用：卓の登録ステータスで絞り込む -->
+        <div class="status-filters hidden" id="listFilters" aria-label="卓一覧の表示切り替え">
+          <button type="button" class="status-filter active" data-status="すべて">すべて</button>
+          <button type="button" class="status-filter" data-status="確定">確定</button>
+          <button type="button" class="status-filter" data-status="調整中">調整中</button>
+          <button type="button" class="status-filter" data-status="通過済み">通過済み</button>
+          <span id="listResultCount" class="list-result-count" aria-live="polite">0件</span>
+        </div>
+        <section id="calendarView" class="panel">
+          <div class="calendar-header">
+            <h3 id="monthTitle" class="calendar-month-title" aria-live="polite"></h3>
+            <button id="prevMonth" class="calendar-arrow" type="button" aria-label="前月">‹</button>
+            <div class="calendar-jump" aria-label="表示する年月を選択">
+              <label for="jumpYear">年</label>
+              <input id="jumpYear" type="number" min="1900" max="2100" step="1" aria-label="表示する年" />
+              <label for="jumpMonth">月</label>
+              <select id="jumpMonth" aria-label="表示する月">
+                <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+                <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+                <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+                <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+              </select>
+              <button id="jumpToMonth" type="button" class="calendar-jump-button">移動</button>
+              <button id="backToToday" type="button" class="calendar-today-button">今日に戻る</button>
+            </div>
+            <button id="nextMonth" class="calendar-arrow" type="button" aria-label="翌月">›</button>
+          </div>
+          <div id="calendar" class="calendar"></div>
+          <!-- スマホでは選択した日付の予定を下にまとめて表示する -->
+          <section class="mobile-day-agenda" id="mobileDayAgenda" aria-live="polite"><div class="agenda-heading"><h4 id="mobileDayTitle">選択した日の予定</h4><button type="button" id="addPersonalSchedule" class="secondary-button">＋ 個人予定</button></div><div id="mobileDayEvents"></div></section>
+          <!-- 画面端の案内役。登録した画像がここに表示される -->
+    <aside class="character-guide" id="characterGuide">
+      <div class="speech-bubble">
+        <p id="characterName"></p><p id="characterMessage"></p>
+      </div>
+      <div id="characterImage" class="character-image">♡</div>
+      <button id="changeCharacter" class="secondary-button hidden" type="button">別の探索者にする</button>
+    </aside>
+        </section>
+        <section id="personalScheduleForm" class="panel hidden">
+          <h3 id="personalScheduleFormTitle">個人予定を登録</h3>
+          <label for="personalTitle">タイトル</label><input id="personalTitle" maxlength="100" placeholder="例：買い物・通院・予定">
+          <label for="personalDate">日付</label><input id="personalDate" type="date">
+          <label for="personalTime">時間（任意）</label><input id="personalTime" type="time">
+          <label for="personalMemo">メモ</label><textarea id="personalMemo" rows="4" placeholder="予定の詳細"></textarea>
+          <div class="form-actions"><button id="savePersonalSchedule" type="button" class="primary-button">保存</button><button id="cancelPersonalSchedule" type="button" class="secondary-button">戻る</button></div>
+        </section>
+        <section id="listView" class="panel hidden">
+          <h3>登録した卓</h3><div id="sessionList"></div>
+        </section>
+        <!-- 卓の確認専用画面。保存操作をしないため安心して内容を見られる -->
+        <section id="sessionPreview" class="panel hidden">
+          <div class="detail-header"><h3>卓のプレビュー</h3><button type="button" id="closeSessionPreview" class="secondary-button">一覧に戻る</button></div>
+          <div id="sessionPreviewContent" class="detail-content"></div>
+          <div class="form-actions"><button type="button" id="previewScheduleEdit" class="secondary-button">スケジュール情報を編集</button><button type="button" id="previewSessionInfoEdit" class="secondary-button">セッション情報を編集</button></div>
+        </section>
+        <!-- 通過後の感想や記録。スケジュールとは別の編集画面 -->
+        <section id="sessionInfoForm" class="panel hidden">
+          <div class="detail-header"><h3 id="sessionInfoTitle">セッション情報</h3><button type="button" id="cancelSessionInfoTop" class="secondary-button">戻る</button></div>
+          <p class="help-text" id="sessionInfoScenario"></p>
+          <label for="sessionEnding">シナリオのエンド名</label><input id="sessionEnding" type="text" maxlength="200" placeholder="例：END A 生還">
+          <label for="sessionImpression">感想・思い出</label><textarea id="sessionImpression" rows="6" placeholder="卓の感想や思い出を自由に記録"></textarea>
+          <div class="participant-heading"><h4>動画URL</h4><button type="button" id="addSessionVideo" class="secondary-button">＋ 動画URLを追加</button></div>
+          <div id="sessionVideoRows" class="participant-rows"></div>
+          <h4>画像</h4><p class="help-text">複数選択可能。画像はこのブラウザ内（IndexedDB）に保存するよ。元画像は別途保管してね。</p>
+          <input type="file" id="sessionImageInput" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
+          <div id="sessionImageGallery" class="session-image-gallery"></div>
+          <div class="form-actions"><button type="button" id="saveSessionInfo" class="primary-button">セッション情報を保存</button><button type="button" id="cancelSessionInfo" class="secondary-button">キャンセル</button></div>
+        </section>
+        <section id="sessionForm" class="panel hidden">
+          <h3 id="sessionFormTitle">スケジュール情報を登録</h3>
+          <label for="sessionName">シナリオ名</label><input id="sessionName" type="text" maxlength="100" placeholder="シナリオ名を入力">
+          <p class="help-text">1つの卓に開催日を複数追加できるよ。日程が決まっていなければ空欄のままでOK。</p>
+          <!-- ミニカレンダーで複数の日付を選ぶ。選択後に時間だけ設定する。 -->
+          <div class="date-picker-panel">
+            <div class="mini-calendar-header">
+              <button type="button" id="miniPrevMonth" class="secondary-button" aria-label="前の月">‹</button>
+              <strong id="miniCalendarTitle"></strong>
+              <button type="button" id="miniNextMonth" class="secondary-button" aria-label="次の月">›</button>
+            </div>
+            <div id="miniCalendar" class="mini-calendar" aria-label="開催日を選択"></div>
+            <p class="help-text mini-calendar-help">開催日をタップして選択・解除できるよ。複数日も選択可能。</p>
+          </div>
+          <div id="sessionDates" class="session-dates"></div>
+          <label for="sessionStatus">ステータス</label>
+          <select id="sessionStatus"><option>確定</option><option>調整中</option><option>通過済み</option></select>
+          <!-- キャラクターシートの提出期限。卓の開催日とは別に保存する -->
+          <div class="sheet-deadline-field">
+            <label for="sessionSheetDeadline">キャラクターシート提出期限</label>
+            <input id="sessionSheetDeadline" type="date">
+            <p class="help-text">提出期限が決まっていなければ空欄でOK。カレンダーではオレンジ色で表示するよ。</p>
+          </div>
+          <!-- 参加者情報。PLとPCを1行でセット登録する -->
+          <div class="participants-section">
+            <h4>参加者・キャラクター</h4>
+            <p class="help-text">今は名前で登録するよ。将来、同卓者一覧と連携できるように情報を分けて保存する。</p>
+            <label for="sessionKP">KP名</label>
+            <input id="sessionKP" type="text" maxlength="100" placeholder="KPの名前（1人）">
+            <div class="participant-group"><div class="participant-heading"><h5>SKP名</h5><button type="button" class="secondary-button" id="addSKP">＋ SKPを追加</button></div><div id="sessionSKPs" class="participant-rows"></div></div>
+            <div class="participant-group"><div class="participant-heading"><h5>参加PL・PC</h5><button type="button" class="secondary-button" id="addPL">＋ PL・PCを追加</button></div><div class="plpc-column-headings"><span>PL名</span><span>PC名</span><span></span></div><div id="sessionPLPCs" class="participant-rows"></div></div>
+          </div>
+          <div class="form-actions"><button id="saveSession" class="primary-button">保存する</button><button id="cancelSession" class="secondary-button">キャンセル</button></div>
+        </section>
+      </section>
+
+      <!-- シナリオの購入候補や所持状況を管理する。ZIPそのものは保存しない -->
+      <section id="scenariosPage" class="hidden">
+        <header class="header"><div><p class="subtitle">SCENARIO LIBRARY</p><h2>シナリオ保存</h2></div><button type="button" id="newScenarioButton" class="primary-button">＋ シナリオ追加</button></header>
+        <div class="scenario-toolbar"><label for="scenarioFilter">表示</label><select id="scenarioFilter"><option value="すべて">すべて</option><option value="未所持">未所持</option><option value="所持">所持</option><option value="部屋作成済">部屋作成済</option></select><span id="scenarioCount"></span></div>
+        <section id="scenarioForm" class="panel hidden">
+          <h3 id="scenarioFormTitle">シナリオを追加</h3>
+          <label for="scenarioName">シナリオ名</label><input id="scenarioName" maxlength="150" placeholder="シナリオ名">
+          <label for="scenarioStatus">状態</label><select id="scenarioStatus"><option>未所持</option><option>所持</option><option>部屋作成済</option></select>
+          <label for="scenarioSource">BOOTH・pixivなどのURL</label><input id="scenarioSource" type="url" placeholder="https://...">
+          <label for="scenarioRoom">ココフォリアの部屋URL</label><input id="scenarioRoom" type="url" placeholder="https://...">
+          <label for="scenarioMemo">メモ</label><textarea id="scenarioMemo" rows="5" placeholder="行きたい理由・HO・保存場所など"></textarea>
+          <label class="checkbox-label"><input id="scenarioStar" type="checkbox"> ★ 上部に固定する</label>
+          <p class="help-text">シナリオのZIPファイル自体は保存しません。URLやメモを管理する画面です。</p>
+          <div class="form-actions"><button type="button" id="saveScenario" class="primary-button">保存</button><button type="button" id="cancelScenario" class="secondary-button">キャンセル</button></div>
+        </section>
+        <!-- シナリオの閲覧専用画面。編集フォームとは分けて誤操作を防ぐ -->
+        <section id="scenarioPreview" class="panel hidden">
+          <div class="detail-header"><h3>シナリオのプレビュー</h3><button type="button" id="closeScenarioPreview" class="secondary-button">一覧に戻る</button></div>
+          <div id="scenarioPreviewContent" class="detail-content"></div>
+          <div class="form-actions"><button type="button" id="editPreviewScenario" class="secondary-button">編集する</button></div>
+        </section>
+        <div id="scenarioList" class="scenario-list"></div>
+      </section>
+      <!-- 新しい探索者管理画面 -->
+      <section id="charactersPage" class="hidden">
+        <header class="header">
+          <div><p class="subtitle">MY CHARACTERS</p><h2>探索者管理</h2></div>
+          <button id="newCharacterButton" class="primary-button">＋ 探索者を登録</button>
+        </header>
+        <p class="help-text">☆を付けた探索者から、画面右下の案内役をランダムで選ぶよ。</p>
+        <div id="characterList" class="character-grid"></div>
+
+        <section id="characterForm" class="panel hidden form-panel">
+          <h3 id="characterFormTitle">探索者を登録</h3>
+          <form id="characterEditor">
+            <input id="characterId" type="hidden">
+            <label for="characterInputName">名前（必須）</label>
+            <input id="characterInputName" type="text" maxlength="60" required placeholder="探索者の名前">
+            <label for="characterProfile">プロフィール</label>
+            <textarea id="characterProfile" rows="3" maxlength="1000" placeholder="年齢・職業・性格など"></textarea>
+            <label for="characterColor">イメージカラー</label>
+            <input id="characterColor" type="color" value="#a38acb">
+            <label for="characterSpeech">案内用のセリフ</label>
+            <textarea id="characterSpeech" rows="2" maxlength="200" placeholder="次の卓は{schedule}っす！"></textarea>
+            <p class="help-text">{schedule} と書いた場所が、次回の予定に置き換わるよ。</p>
+            <label for="characterSheet">キャラクターシートのURL</label>
+            <input id="characterSheet" type="url" placeholder="https://...">
+            <label for="characterPortrait">立ち絵画像（PNG / JPEG / WebP、2MBまで）</label>
+            <input id="characterPortrait" type="file" accept="image/png,image/jpeg,image/webp">
+            <p class="help-text">画像はこのブラウザ内に保存するよ。大切な画像の原本は別に保管してね。</p>
+            <label class="checkbox-label"><input id="characterFavorite" type="checkbox" checked> お気に入りに登録する</label>
+            <div class="form-actions">
+              <button type="submit" class="primary-button">保存する</button>
+              <button type="button" id="cancelCharacter" class="secondary-button">キャンセル</button>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <!-- バックアップはローカルのテキストファイルへ。読み込みは全件置き換え。 -->
+    <section id="backupPanel" class="backup-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="backupTitle">
+      <div class="backup-dialog panel">
+        <h2 id="backupTitle">データのバックアップ・復元</h2>
+        <p>卓・探索者・個人予定・シナリオ・セッション画像をまとめてTXTファイルに保存できます。画像が多い場合はファイルが大きくなります。</p>
+        <button type="button" id="exportBackup" class="primary-button">TXTに書き出す</button>
+        <hr>
+        <label for="importBackup">バックアップTXTを読み込む</label>
+        <input id="importBackup" type="file" accept=".txt,text/plain,application/json">
+        <p class="help-text">読み込むと現在の登録内容をすべて置き換えます。復元前に今のデータも書き出してください。</p>
+        <p id="backupMessage" role="status" aria-live="polite"></p>
+        <button type="button" id="closeBackup" class="secondary-button">閉じる</button>
+      </div>
+    </section>
+    <!-- スマホの親指が届きやすい下部メニュー。既存の画面切替ボタンを呼び出す -->
+    <nav class="mobile-bottom-nav" aria-label="メインメニュー">
+      <button type="button" class="mobile-nav-item active" id="mobileCalendarNav"><span aria-hidden="true">▦</span><span>カレンダー</span></button>
+      <button type="button" class="mobile-nav-item" id="mobileListNav"><span aria-hidden="true">☷</span><span>卓一覧</span></button>
+      <button type="button" class="mobile-nav-item" id="mobileCharactersNav"><span aria-hidden="true">♧</span><span>探索者</span></button>
+      <button type="button" class="mobile-nav-item" id="mobileScenariosNav"><span aria-hidden="true">▤</span><span>シナリオ</span></button>
+      <button type="button" class="mobile-nav-item" id="mobileBackupNav"><span aria-hidden="true">⇩</span><span>保存</span></button>
+    </nav>
+
+
+  </div>
+</body>
+</html>
